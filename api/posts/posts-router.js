@@ -11,15 +11,12 @@ router.get("/", (req, res) => {
     })
     .catch((error) => {
       res.status(500).json({
-        //message: "The posts information could not be retrieved",
         errors: error.message,
       });
     });
 });
 
 //GET /api/posts/:id
-//post_ with the specified `id` is not found: 404,message: "The post with the specified ID does not exist"
-//error in retrieving the _post_ from the database: 500, message: "The post information could not be retrieved"
 
 router.get("/:id", (req, res) => {
   Posts.findById(req.params.id)
@@ -42,24 +39,6 @@ router.get("/:id", (req, res) => {
 
 //POST /api/posts
 
-// router.post("/", async (req, res) => {
-//   try {
-//     if (!req.body.title || !req.body.contents) {
-//       res.status(400).json({
-//         message: "Please provide title and contents for the post",
-//       });
-//     } else {
-//       const newPost = await Posts.insert(req.body);
-//       res.status(201).json(newPost);
-//     }
-//   } catch (err) {
-//     res.status(500).json({
-//       message: "There was an error while saving the post to the database",
-//       error: err.message,
-//     });
-//   }
-// });
-
 router.post("/", (req, res) => {
   if (!req.body.title || !req.body.contents) {
     res.status(400).json({
@@ -67,6 +46,9 @@ router.post("/", (req, res) => {
     });
   } else {
     Posts.insert(req.body)
+      .then(({ id }) => {
+        return Posts.findById(id);
+      })
       .then((newPost) => {
         res.status(201).json(newPost);
       })
@@ -95,9 +77,12 @@ router.put("/:id", (req, res) => {
     });
   } else {
     Posts.update(id, body)
+      .then(() => {
+        return Posts.findById(id);
+      })
       .then((updatedPost) => {
         if (updatedPost) {
-          res.status(200).json(updatedPost.id);
+          res.status(200).json(updatedPost);
         } else {
           res
             .status(404)
@@ -105,9 +90,9 @@ router.put("/:id", (req, res) => {
         }
       })
       .catch((error) => {
-        console.log(error);
         res.status(500).json({
           message: "The post information could not be modified",
+          error: error.message,
         });
       });
   }
@@ -115,7 +100,45 @@ router.put("/:id", (req, res) => {
 
 //DELETE /api/posts/:id
 
+router.delete("/:id", async (req, res) => {
+  try {
+    const maybe = await Posts.findById(req.params.id);
+    if (!maybe) {
+      res.status(404).json({
+        message: "The post with the specified ID does not exist",
+      });
+    } else {
+      const deletedPost = await Posts.remove(req.params.id);
+      res.json(deletedPost);
+    }
+  } catch (err) {
+    res.status(500).json({
+      message: "The post could not be removed",
+      error: err.message,
+    });
+  }
+});
 
+// router.delete("/:id", (req, res) => {
+//   const { id } = req.params;
+//   Posts.findById(id);
+//   if (!id) {
+//     res.status(404).json({
+//       message: "The post with the specified ID does not exist",
+//     });
+//   } else {
+//     Posts.remove(id)
+//       .then((deletedPost) => {
+//         res.json(deletedPost);
+//       })
+//       .catch((err) => {
+//         res.status(500).json({
+//           message: "The post could not be removed",
+//           error: err.message,
+//         })
+//       })
+//   }
+// });
 
 //GET /api/posts/:id/comments
 
